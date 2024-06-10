@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>json-schema-validator-native-example</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+
+    <json-schema-validator.version>1.4.1-SNAPSHOT</json-schema-validator.version>
+    <joni.version>2.2.1</joni.version>
+    <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
+    <native-maven-plugin.version>0.9.28</native-maven-plugin.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+      <exclusions>
+        <exclusion>
+            <groupId>com.ethlo.time</groupId>
+            <artifactId>itu</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+          <configuration>
+              <archive>
+                  <manifest>
+                      <mainClass>com.example.App</mainClass>
+                  </manifest>
+              </archive>
+          </configuration>
+      </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+              <execution>
+                <id>test-native</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <phase>test</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <imageName>json-schema-validator-native-example</imageName>
+              <verbose>true</verbose>
+              <!-- For Quick Build (22.1+) -->
+              <!-- <quickBuild>true</quickBuild> -->
+              <buildArgs>
+                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                <!-- For mostly static native image (only on Linux AMD64 systems) -->
+                <!-- <buildArg>-H:+StaticExecutableWithDynamicLibC</buildArg> -->
+                <!-- To generate the Native Image build output JSON (22.3+) -->
+                <!-- <buildArg>-H:BuildOutputJSONFile=build.json</buildArg> -->
+              </buildArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+	  <id>joni</id>
+      <dependencies>
+        <dependency>
+           <groupId>org.jruby.joni</groupId>
+           <artifactId>joni</artifactId>
+           <version>${joni.version}</version>
+        </dependency>
+      </dependencies>		
+	</profile>
+  </profiles>
+</project>
