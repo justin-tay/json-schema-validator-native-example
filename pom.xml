@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>json-schema-validator-native-example</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+
+    <json-schema-validator.version>1.5.0</json-schema-validator.version>
+    <joni.version>2.2.1</joni.version>
+    <logback.version>1.5.6</logback.version>
+    <graalvm.version>24.0.1</graalvm.version>
+
+    <junit-jupiter.version>5.10.2</junit-jupiter.version>
+
+    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+    <native-maven-plugin.version>0.10.2</native-maven-plugin.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+      <exclusions>
+        <exclusion>
+            <groupId>com.ethlo.time</groupId>
+            <artifactId>itu</artifactId>
+        </exclusion>
+<!--
+        <exclusion>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </exclusion>
+-->        
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit-jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+          <configuration>
+              <archive>
+                  <manifest>
+                      <mainClass>com.example.App</mainClass>
+                  </manifest>
+              </archive>
+          </configuration>
+      </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+              <execution>
+                <id>test-native</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <phase>test</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <imageName>json-schema-validator-native-example</imageName>
+              <verbose>true</verbose>
+              <!-- For Quick Build (22.1+) -->
+              <!-- <quickBuild>true</quickBuild> -->
+              <buildArgs>
+                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                <buildArg>--report-unsupported-elements-at-runtime</buildArg>
+                <!-- For mostly static native image (only on Linux AMD64 systems) -->
+                <!-- <buildArg>-H:+StaticExecutableWithDynamicLibC</buildArg> -->
+                <!-- To generate the Native Image build output JSON (22.3+) -->
+                <!-- <buildArg>-H:BuildOutputJSONFile=build.json</buildArg> -->
+              </buildArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>joni</id>
+      <dependencies>
+        <dependency>
+           <groupId>org.jruby.joni</groupId>
+           <artifactId>joni</artifactId>
+           <version>${joni.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>graaljs</id>
+      <dependencies>
+        <dependency>
+           <groupId>org.graalvm.polyglot</groupId>
+           <artifactId>polyglot</artifactId>
+           <version>${graalvm.version}</version>
+        </dependency>
+        <dependency>
+           <groupId>org.graalvm.polyglot</groupId>
+           <artifactId>js</artifactId>
+           <version>${graalvm.version}</version>
+           <type>pom</type>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+</project>

@@ -1,0 +1,93 @@
+# Adapted from 
+# https://github.com/jhipster/generator-jhipster-native/blob/6bec2dd7c852ce2b25686710b8ff45dbebb69fcf/generators/ci-cd/templates/github-native.yml.ejs
+# https://github.com/oktadev/auth0-full-stack-java-example/blob/main/.github/workflows/publish.yml
+
+name: Build Native
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build native on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        java-version: ['21']
+        include:
+        - os: ubuntu-latest
+          native-build-args: --verbose -J-Xmx11g -H:-DeadlockWatchdogExitOnTimeout -H:DeadlockWatchdogInterval=0
+          executable-suffix: ''
+        - os: macos-latest
+          native-build-args: --verbose -J-Xmx13g
+          executable-suffix: ''
+        - os: windows-latest
+          native-build-args: --verbose -J-Xmx11g -H:-DeadlockWatchdogExitOnTimeout -H:DeadlockWatchdogInterval=0
+          executable-suffix: '.exe'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up GraalVM (Java ${{ matrix.java-version }})
+#        uses: graalvm/setup-graalvm@v1.2.1
+        uses: graalvm/setup-graalvm@2911b2304bee2c2f59b9a67bf45f025a6b6de4b1
+        with:
+          java-version: '${{ matrix.java-version }}'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+      - name: Java version
+        run: |
+          java --version
+          native-image --version
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven          
+# The public Linux runner typically only has 7 GB ram which is insufficient
+      - name: Configure virtual memory (Linux)
+        if: runner.os == 'Linux'
+#        uses: pierotofy/set-swap-space@v1.0
+        uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c
+        with:
+          swap-size-gb: 11
+# The public Windows runner typically only has 7 GB ram which is insufficient
+      - name: Configure virtual memory (Windows)
+#        uses: al-cheb/configure-pagefile-action@v1.4
+        uses: al-cheb/configure-pagefile-action@a3b6ebd6b634da88790d9c58d4b37a7f4a7b8708
+        if: runner.os == 'Windows'
+        with:
+          minimum-size: 11GB
+          maximum-size: 11GB
+      - name: Memory (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Page file allocated size:"
+          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
+          echo "Physical memory:"
+          (Get-WMIObject Win32_PhysicalMemory |  Measure-Object Capacity -Sum).sum/1GB
+        shell: pwsh
+      - name: Build native images
+        run: mvn -B "-Dnative.build-args=${{ matrix.native-build-args }}" "-Pnative,graaljs" native:compile
+      - name: Test native images
+        run: ./target/json-schema-validator-native-example${{ matrix.executable-suffix }}
+      - name: Archive binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: json-schema-validator-native-example-${{ matrix.os }}
+          path: target/json-schema-validator-native-example${{ matrix.executable-suffix }}
+      - name: Generate build reports (On Failure)
+        run: |
+          mvn surefire-report:report-only -Daggregate=true
+        if: failure()
+      - name: Archive build reports (On Failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-reports-${{ matrix.os }}
+          path: 'target/site/'          
