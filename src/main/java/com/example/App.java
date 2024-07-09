@@ -121,6 +121,7 @@ public class App {
         OutputFormat<?> outputFormat = getOutput(args);
         Object result = schema.validate(inputNode, outputFormat, executionContext -> {
             executionContext.getExecutionConfig().setFormatAssertionsEnabled(true);
+            executionContext.getExecutionConfig().setDebugEnabled(true);
         });
         if (result instanceof Collection<?> collection) {
             collection.forEach(System.out::println);
