@@ -17,23 +17,22 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        java-version: ['21']
+        java-version: ['25']
         include:
         - os: ubuntu-latest
-          native-build-args: --verbose -J-Xmx11g -H:-DeadlockWatchdogExitOnTimeout -H:DeadlockWatchdogInterval=0
+          native-build-args: --verbose
           executable-suffix: ''
         - os: macos-latest
-          native-build-args: --verbose -J-Xmx13g
+          native-build-args: --verbose
           executable-suffix: ''
         - os: windows-latest
-          native-build-args: --verbose -J-Xmx11g -H:-DeadlockWatchdogExitOnTimeout -H:DeadlockWatchdogInterval=0
+          native-build-args: --verbose
           executable-suffix: '.exe'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
       - name: Set up GraalVM (Java ${{ matrix.java-version }})
-#        uses: graalvm/setup-graalvm@v1.2.1
-        uses: graalvm/setup-graalvm@2911b2304bee2c2f59b9a67bf45f025a6b6de4b1
+        uses: graalvm/setup-graalvm@v1
         with:
           java-version: '${{ matrix.java-version }}'
           distribution: 'graalvm'
@@ -49,29 +48,6 @@ jobs:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-maven          
-# The public Linux runner typically only has 7 GB ram which is insufficient
-      - name: Configure virtual memory (Linux)
-        if: runner.os == 'Linux'
-#        uses: pierotofy/set-swap-space@v1.0
-        uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c
-        with:
-          swap-size-gb: 11
-# The public Windows runner typically only has 7 GB ram which is insufficient
-      - name: Configure virtual memory (Windows)
-#        uses: al-cheb/configure-pagefile-action@v1.4
-        uses: al-cheb/configure-pagefile-action@a3b6ebd6b634da88790d9c58d4b37a7f4a7b8708
-        if: runner.os == 'Windows'
-        with:
-          minimum-size: 11GB
-          maximum-size: 11GB
-      - name: Memory (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          echo "Page file allocated size:"
-          (Get-CimInstance Win32_PageFileUsage).AllocatedBaseSize
-          echo "Physical memory:"
-          (Get-WMIObject Win32_PhysicalMemory |  Measure-Object Capacity -Sum).sum/1GB
-        shell: pwsh
       - name: Build native images
         run: mvn -B "-Dnative.build-args=${{ matrix.native-build-args }}" "-Pnative,graaljs" native:compile
       - name: Test native images
@@ -90,4 +66,4 @@ jobs:
         if: failure()
         with:
           name: build-reports-${{ matrix.os }}
-          path: 'target/site/'          
+          path: 'target/site/'
